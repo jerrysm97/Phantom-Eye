@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phantom-Eye Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Phantom-Eye</h1>
+            <div id="status-bar">
+                <a href="/cam" style="color:#00c6ff;text-decoration:none;font-weight:700;">📹 Camera Discovery</a>
+                <span id="interface-info">Interface: <span id="iface">...</span></span>
+                <span id="scan-status" class="status-active">Scanning...</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="card">
+                <h2>Discovered Devices</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>MAC Address</th>
+                                <th>Vendor</th>
+                                <th>Type</th>
+                                <th>Signal</th>
+                                <th>First Seen</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="device-list">
+                            <!-- Devices will be injected here -->
+                            <tr class="empty-row">
+                                <td colspan="7">Scanning for targets...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card full-width">
+                <h2>Network Environment (Deep-Scrape)</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>BSSID</th>
+                                <th>SSID</th>
+                                <th>Vendor</th>
+                                <th>Signal</th>
+                                <th>First Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="network-list">
+                            <tr>
+                                <td colspan="5" class="status-waiting">Scraping airwaves...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/scanner.js') }}"></script>
+</body>
+
+</html>

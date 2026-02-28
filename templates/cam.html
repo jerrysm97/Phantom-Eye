@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Discovery | Phantom-Eye</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        .cam-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .cam-feed {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+
+        .cam-feed img {
+            width: 100%;
+            display: block;
+        }
+
+        .cam-feed .cam-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 10px 15px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cam-label {
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .cam-live-dot {
+            width: 8px;
+            height: 8px;
+            background: #ff3b30;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        .scan-btn {
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+
+        .scan-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 114, 255, 0.4);
+        }
+
+        .scan-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .cam-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .cam-status.open {
+            background: rgba(52, 199, 89, 0.2);
+            color: #34c759;
+        }
+
+        .cam-status.closed {
+            background: rgba(255, 59, 48, 0.2);
+            color: #ff3b30;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00c6ff, #0072ff);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        #scan-log {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--muted);
+            max-height: 80px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .full-viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .full-viewer img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .full-viewer .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .cam-fps {
+            font-size: 0.7rem;
+            color: #34c759;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Phantom-Eye</h1>
+            <div id="status-bar">
+                <a href="/" style="color:var(--muted);text-decoration:none;">Dashboard</a>
+                <span id="scan-status" class="status-active">Camera Discovery</span>
+            </div>
+        </header>
+
+        <main>
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>📹 Network Camera Scanner</h2>
+                    <button class="scan-btn" id="btn-scan" onclick="startScan()">🔍 Scan Network</button>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="scan-progress"></div>
+                </div>
+                <div id="scan-log"></div>
+            </div>
+
+            <div class="card" style="border: 1px solid rgba(0,200,255,0.15);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h2>📡 WiFi Networks</h2>
+                        <p style="color:var(--muted);font-size:0.8rem;margin:0;">Current: <span id="wifi-current"
+                                style="color:#34c759;">Loading...</span></p>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button class="scan-btn" id="btn-wifi-scan" onclick="loadNetworks()"
+                            style="padding:10px 20px;font-size:0.85rem;">📡 Scan WiFi</button>
+                        <button class="scan-btn" onclick="disconnectWifi()"
+                            style="padding:10px 20px;font-size:0.85rem;background:linear-gradient(135deg,#ff3b30,#ff6b5c);">Disconnect</button>
+                    </div>
+                </div>
+                <div class="table-container" style="margin-top:12px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Network (SSID)</th>
+                                <th>Signal</th>
+                                <th>Security</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wifi-list">
+                            <tr>
+                                <td colspan="4" class="status-waiting">Click "Scan WiFi" to discover nearby networks
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Discovered Cameras</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Vendor</th>
+                                <th>Ports</th>
+                                <th>RTSP</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cam-list">
+                            <tr>
+                                <td colspan="6" class="status-waiting">Click "Scan Network" to discover cameras</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Live Feeds</h2>
+                <div class="cam-grid" id="cam-grid">
+                    <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--muted);">
+                        No active streams. Click "View" on a discovered camera to start.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="border: 1px solid rgba(0,114,255,0.2);">
+                <h2>➕ Add Camera Manually</h2>
+                <p style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">Add a camera from any network by IP
+                    address (e.g. a camera on a different WiFi you have access to).</p>
+                <div
+                    style="display:grid;grid-template-columns:1fr 100px 100px 100px 150px auto;gap:10px;align-items:end;">
+                    <div>
+                        <label style="font-size:0.75rem;color:var(--muted);display:block;">Camera IP *</label>
+                        <input id="manual-ip" type="text" placeholder="192.168.x.x"
+                            style="width:100%;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem;color:var(--muted);display:block;">Port</label>
+                        <input id="manual-port" type="text" value="554"
+                            style="width:100%;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem;color:var(--muted);display:block;">Username</label>
+                        <input id="manual-user" type="text" value="admin"
+                            style="width:100%;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem;color:var(--muted);display:block;">Password</label>
+                        <input id="manual-pass" type="password" placeholder=""
+                            style="width:100%;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem;color:var(--muted);display:block;">RTSP Path</label>
+                        <input id="manual-path" type="text" value="/"
+                            style="width:100%;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:0.9rem;">
+                    </div>
+                    <button onclick="addManualCam()" class="scan-btn"
+                        style="padding:8px 20px;font-size:0.85rem;">Add</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Camera Info Modal -->
+    <div id="cam-info-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:var(--card); padding:30px; border-radius:12px; border:1px solid var(--border); width:400px; max-width:90%;">
+            <h2 style="margin-top:0;">📷 Camera Details</h2>
+            <div id="cam-info-content" style="color:var(--text); font-size:0.9rem; line-height:1.5;"></div>
+            <button onclick="document.getElementById('cam-info-modal').style.display='none'"
+                style="margin-top:20px; width:100%; padding:10px; background:linear-gradient(135deg,#ff3b30,#ff6b5c); border:none; border-radius:8px; color:white; cursor:pointer;">Close</button>
+        </div>
+    </div>
+
+    <!-- Fullscreen viewer -->
+    <div class="full-viewer" id="full-viewer">
+        <img id="full-viewer-img" src="">
+        <button class="close-btn" onclick="closeFullViewer()">✕ Close</button>
+        <div style="position:absolute; top:20px; left:20px; color:white;">
+            <span class="cam-live-dot" style="display:inline-block;margin-right:8px;"></span>
+            <span id="full-viewer-label">LIVE</span>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/cam.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+server/cert.pem
+server/key.pem
+.DS_Store
+*.swp
+*.swo
+captures/
+*.db
